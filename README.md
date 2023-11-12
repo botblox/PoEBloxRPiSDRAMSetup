@@ -14,7 +14,7 @@ By default, I2C on raspberry pi is disabled by default. Hence it must be enabled
 
 Edit `raspi-blacklist.conf` kernel modules file. E.g.
 
-```
+```bash
 sudo nano /etc/modprobe.d/raspi-blacklist.conf
 ```
 
@@ -31,14 +31,13 @@ blacklist spi-bcm2708
 
 Edit `/etc/modules` to add I2C kernel module.
 
-```
+```bash
 sudo nano /etc/modules
 ```
 
 Add `i2c-dev` module
 
 ```bash
-...
 # add this at end of file
 i2c-dev
 ```
@@ -57,17 +56,23 @@ sudo adduser pi i2c
 
 ### Quick test
 
-- Connect up `SDA`, `SCL` and `GND` pins to TPS2388 line and confirm that the device can be found on the bus
+- Connect up `SDA`, `SCL` and `GND` pins to TPS23881 line and confirm that the device can be found on the bus
 
 ```bash
 i2cdetect -y 0
 ```
 
-You should see a device with address 0x20 for channels 1-4 (or 0x21 for channels 5-8). Note that you can use 0x7F as a broadcast address for all TPS23881 devices on the I2C bus.
+You should see a device with address 0x20 for channels 1-4 (or 0x21 for channels 5-8 if in Configuration A). Note that you can use 0x7F as a broadcast address for all TPS23881 devices on the I2C bus.
 
 ### Installing
 
 - Clone this repo locally and `cd` into project root
+
+```bash
+git clone git@github.com:botblox/PoEBloxRPiSDRAMSetup.git
+cd PoEBloxRPiSDRAMSetup
+```
+
 - Create python virtualenv and activate
 
 ```bash
@@ -85,7 +90,7 @@ pip install -r requirements.txt
 
 - Run setup script
 
-```
+```bash
 python3 tps23881_setup.py
 ```
 
