@@ -5,6 +5,8 @@ from time import sleep
 
 from smbus2 import SMBus, i2c_msg
 
+from i2c_raw import I2CRaw
+
 logging.basicConfig()
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -80,81 +82,95 @@ if __name__ == "__main__":
 
     logger.info("SRAM and Parity programming steps for TPS23881")
     logger.info(f"Parity enabled: {is_parity_enabled}")
+    bus = SMBus(1)
+    bus.write_byte_data(i2c_address, 0x60, 0x01)  # Reset the memory address pointer
+    set_start_address(bus)
 
-    with SMBus(1) as bus:
-        bus.write_byte_data(i2c_address, 0x60, 0x01)  # Reset the memory address pointer
-        set_start_address(bus)
-
-        if is_parity_enabled:
-            bus.write_byte_data(
-                i2c_address, 0x60, 0xC4
-            )  # Reset CPU and enable Parity Write
-            prepare_ram_download(bus)
-
-            # load Parity data
-            parity_data = load_tps23881_parity_binfile()
-            # write Parity data
-            # (1) write in blocks of 32 bytes at once
-            # number_of_32byte_blocks = (len(parity_data) // 32) + 1
-            # for i in range(0, number_of_32byte_blocks):
-            #     if i < number_of_32byte_blocks - 1:
-            #         block_data = parity_data[(i * 32) : (i + 1) * 32]
-            #     else:
-            #         block_data = parity_data[(i * 32) :]
-            #     bus.write_block_data(i2c_address, 0x61, block_data)
-            # (2) write using i2c transaction
-            msg = i2c_msg.write(i2c_address, parity_data)
-            bus.i2c_rdwr(msg)
-
-            bus.write_byte_data(
-                i2c_address, 0x60, 0xC5
-            )  # Keep CPU in reset and reset memory pointer
-            set_start_address(bus)
-
+    if is_parity_enabled:
         bus.write_byte_data(
-            i2c_address, 0x60, 0xC0
-        )  # Keep CPU in reset and enable SRAM I2C write
+            i2c_address, 0x60, 0xC4
+        )  # Reset CPU and enable Parity Write
+        prepare_ram_download(bus)
 
-        # prepare for RAM download
-        if not is_parity_enabled:
-            prepare_ram_download(bus)
-
-        # load SRAM data
-        sram_data = load_tps23881_sram_binfile()
-        # write SRAM block data - 2 ways to do this
+        # load Parity data
+        parity_data = load_tps23881_parity_binfile()
+        # write Parity data
         # (1) write in blocks of 32 bytes at once
-        # number_of_32byte_blocks = (len(sram_data) // 32) + 1
+        # number_of_32byte_blocks = (len(parity_data) // 32) + 1
         # for i in range(0, number_of_32byte_blocks):
         #     if i < number_of_32byte_blocks - 1:
-        #         block_data = sram_data[(i * 32) : (i + 1) * 32]
+        #         block_data = parity_data[(i * 32) : (i + 1) * 32]
         #     else:
-        #         block_data = sram_data[(i * 32) :]
+        #         block_data = parity_data[(i * 32) :]
         #     bus.write_block_data(i2c_address, 0x61, block_data)
         # (2) write using i2c transaction
-        msg = i2c_msg.write(i2c_address, sram_data)
-        bus.i2c_rdwr(msg)
+        # msg = i2c_msg.write(i2c_address, parity_data)
+        # bus.i2c_rdwr(msg)
+        # (3) write using i2c block write
+        # bus.write_i2c_block_data(i2c_address, 0x61, parity_data)
+        # (4) write using custom i2c class
+        i2c = I2CRaw(i2c_address, 1)
+        i2c.write(parity_data)
+        i2c.close()
 
-        if is_parity_enabled:
-            bus.write_byte_data(
-                i2c_address, 0x60, 0x18
-            )  # Clears CPU reset and enables SRAM and Parity
-        else:
-            bus.write_byte_data(
-                i2c_address, 0x60, 0x08
-            )  # Clears CPU reset and enables SRAM
+        bus.write_byte_data(
+            i2c_address, 0x60, 0xC5
+        )  # Keep CPU in reset and reset memory pointer
+        set_start_address(bus)
 
-        logger.info("Loaded SRAM data and enabled")
-        sleep(
-            0.20
-        )  # wait 0.20 seconds for the CPU to reset - minimum 0.012 seconds required
+    bus.write_byte_data(
+        i2c_address, 0x60, 0xC0
+    )  # Keep CPU in reset and enable SRAM I2C write
 
-        firmware_revision = bus.read_byte_data(i2c_address, 0x41)
-        logger.info(f"Firmware revision: {firmware_revision}")
+    # prepare for RAM download
+    if not is_parity_enabled:
+        prepare_ram_download(bus)
 
-        # set Port Power Allocation to 4-pair 90W power for channels 1-8
-        bus.write_byte_data(i2c_address, 0x29, 0xFF)
-        bus.write_byte_data(i2c_address + 0b1, 0x29, 0xFF)  # does this need to be used?
+    # load SRAM data
+    sram_data = load_tps23881_sram_binfile()
+    # write SRAM block data - 2 ways to do this
+    # (1) write in blocks of 32 bytes at once
+    # number_of_32byte_blocks = (len(sram_data) // 32) + 1
+    # for i in range(0, number_of_32byte_blocks):
+    #     if i < number_of_32byte_blocks - 1:
+    #         block_data = sram_data[(i * 32) : (i + 1) * 32]
+    #     else:
+    #         block_data = sram_data[(i * 32) :]
+    #     bus.write_block_data(i2c_address, 0x61, block_data)
+    # (2) write using i2c transaction
+    # msg = i2c_msg.write(i2c_address, sram_data)
+    # bus.i2c_rdwr(msg)
+    # (3) write using i2c block write
+    # bus.write_i2c_block_data(i2c_address, 0x61, sram_data)
+    # (4) write using custom i2c class
+    i2c = I2CRaw(i2c_address, 1)
+    i2c.write(
+        sram_data
+    )  # TODO: fix error! Maybe this doesn't work when you are also using smbus library? Ideally we need to debug this on an actual raspberry pi
+    # TODO: we could fork the smbus2 library and remove the 32 byte limit
+    i2c.close()
 
-        # set all channel groups (1-2, 3-4, 5-6, 7-8) to auto mode
-        bus.write_byte_data(i2c_address, 0x12, 0xFF)
-        bus.write_byte_data(i2c_address + 0b1, 0x12, 0xFF)  # does this need to be used?
+    if is_parity_enabled:
+        bus.write_byte_data(
+            i2c_address, 0x60, 0x18
+        )  # Clears CPU reset and enables SRAM and Parity
+    else:
+        bus.write_byte_data(
+            i2c_address, 0x60, 0x08
+        )  # Clears CPU reset and enables SRAM
+
+    logger.info("Loaded SRAM data and enabled")
+    sleep(
+        0.20
+    )  # wait 0.20 seconds for the CPU to reset - minimum 0.012 seconds required
+
+    firmware_revision = bus.read_byte_data(i2c_address, 0x41)
+    logger.info(f"Firmware revision: {firmware_revision}")
+
+    # set Port Power Allocation to 4-pair 90W power for channels 1-8
+    bus.write_byte_data(i2c_address, 0x29, 0xFF)
+    bus.write_byte_data(i2c_address + 0b1, 0x29, 0xFF)  # does this need to be used?
+
+    # set all channel groups (1-2, 3-4, 5-6, 7-8) to auto mode
+    bus.write_byte_data(i2c_address, 0x12, 0xFF)
+    bus.write_byte_data(i2c_address + 0b1, 0x12, 0xFF)  # does this need to be used?
