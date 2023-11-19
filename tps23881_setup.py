@@ -30,14 +30,32 @@ def set_start_address():
     bus.write_byte_data(i2c_address, 0x63, 0x80)  # Set start address MSB
 
 
-def load_tps23881_binfile(filepath: str):
-    sram_data = open(filepath, "rb").read()
-    # offset 1690 or 170 bytes to avoid unnecessary heading bytes (depending on file type)
-    sram_data = (
-        sram_data[170:] if filepath == "TPS23881_2_SRAM_v14.bin" else sram_data[169:]
-    )
+def load_tps23881_sram_binfile():
+    sram_data = open("TPS23881_2_SRAM_v14.bin", "rb").read()
+    # offset 170 bytes to avoid unnecessary heading bytes (depending on file type)
+    sram_data = sram_data[170:]
     sram_data_bytes = list(struct.iter_unpack("c", sram_data))
     del sram_data_bytes[11 - 1 :: 11]  # remove space character bytes
+    del sram_data_bytes[10 - 1 :: 10]  # remove newline character bytes
+    del sram_data_bytes[9 - 1 :: 9]  # remove return character bytes
+
+    sram_data = []
+    _sram_bytestr: str = ""
+    for i, sram_data_byte in enumerate(sram_data_bytes):
+        if i != 0 and i % 8 == 0:
+            sram_data.append(int(_sram_bytestr, 2))
+            _sram_bytestr = ""
+        _sram_bytestr += sram_data_byte[0].decode("utf-8")
+
+    return sram_data
+
+
+def load_tps23881_parity_binfile():
+    sram_data = open("TPS23881_2_PARITY_v14.bin", "rb").read()
+    # offset 168 bytes to avoid unnecessary heading bytes (depending on file type)
+    sram_data = sram_data[168:]
+    print(sram_data[0:40])
+    sram_data_bytes = list(struct.iter_unpack("c", sram_data))
     del sram_data_bytes[10 - 1 :: 10]  # remove newline character bytes
     del sram_data_bytes[9 - 1 :: 9]  # remove return character bytes
 
@@ -74,7 +92,7 @@ if __name__ == "__main__":
         prepare_ram_download()
 
         # load Parity data
-        parity_data = load_tps23881_binfile("TPS23881_2_PARITY_v14.bin")
+        parity_data = load_tps23881_parity_binfile()
         # write Parity data
         # (1) write in blocks of 32 bytes at once
         number_of_32byte_blocks = (len(parity_data) // 32) + 1
@@ -102,7 +120,7 @@ if __name__ == "__main__":
         prepare_ram_download()
 
     # load SRAM data
-    sram_data = load_tps23881_binfile("TPS23881_2_SRAM_v14.bin")
+    sram_data = load_tps23881_sram_binfile()
     # write SRAM block data - 2 ways to do this
     # (1) write in blocks of 32 bytes at once
     number_of_32byte_blocks = (len(sram_data) // 32) + 1
