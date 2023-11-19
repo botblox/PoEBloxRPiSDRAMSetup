@@ -41,7 +41,7 @@ def load_tps23881_binfile(filepath: str):
     del sram_data_bytes[10 - 1 :: 10]  # remove newline character bytes
     del sram_data_bytes[9 - 1 :: 9]  # remove return character bytes
 
-    sram_data: list[int] = []
+    sram_data = []
     _sram_bytestr: str = ""
     for i, sram_data_byte in enumerate(sram_data_bytes):
         if i != 0 and i % 8 == 0:
@@ -80,9 +80,9 @@ if __name__ == "__main__":
         number_of_32byte_blocks = (len(parity_data) // 32) + 1
         for i in range(0, number_of_32byte_blocks):
             if i < number_of_32byte_blocks - 1:
-                block_data: list[int] = parity_data[(i * 32) : (i + 1) * 32]
+                block_data = parity_data[(i * 32) : (i + 1) * 32]
             else:
-                block_data: list[int] = parity_data[(i * 32) :]
+                block_data = parity_data[(i * 32) :]
             bus.write_block_data(i2c_address, 0x61, block_data)
         # (2) write using i2c transaction
         # msg = i2c_msg.write(i2c_address, parity_data)
@@ -108,9 +108,9 @@ if __name__ == "__main__":
     number_of_32byte_blocks = (len(sram_data) // 32) + 1
     for i in range(0, number_of_32byte_blocks):
         if i < number_of_32byte_blocks - 1:
-            block_data: list[int] = sram_data[(i * 32) : (i + 1) * 32]
+            block_data = sram_data[(i * 32) : (i + 1) * 32]
         else:
-            block_data: list[int] = sram_data[(i * 32) :]
+            block_data = sram_data[(i * 32) :]
         bus.write_block_data(i2c_address, 0x61, block_data)
     # (2) write using i2c transaction
     # msg = i2c_msg.write(i2c_address, sram_data)
