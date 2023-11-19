@@ -133,8 +133,8 @@ if __name__ == "__main__":
 
     # set Port Power Allocation to 4-pair 90W power for channels 1-8
     bus.write_byte_data(i2c_address, 0x29, 0xFF)
-    bus.write_byte_data(i2c_address + 0b100, 0x29, 0xFF)  # does this need to be used?
+    bus.write_byte_data(i2c_address + 0b1, 0x29, 0xFF)  # does this need to be used?
 
     # set all channel groups (1-2, 3-4, 5-6, 7-8) to auto mode
     bus.write_byte_data(i2c_address, 0x12, 0xFF)
-    bus.write_byte_data(i2c_address + 0b100, 0x12, 0xFF)  # does this need to be used?
+    bus.write_byte_data(i2c_address + 0b1, 0x12, 0xFF)  # does this need to be used?
