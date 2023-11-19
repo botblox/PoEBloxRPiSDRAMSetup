@@ -83,7 +83,7 @@ if __name__ == "__main__":
 
     with SMBus(1) as bus:
         bus.write_byte_data(i2c_address, 0x60, 0x01)  # Reset the memory address pointer
-        set_start_address()
+        set_start_address(bus)
 
         if is_parity_enabled:
             bus.write_byte_data(
