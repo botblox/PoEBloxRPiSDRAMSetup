@@ -32,8 +32,10 @@ def set_start_address():
 
 def load_tps23881_binfile(filepath: str):
     sram_data = open(filepath, "rb").read()
-    # offset 170 bytes to avoid unnecessary heading bytes
-    sram_data = sram_data[170:]
+    # offset 1690 or 170 bytes to avoid unnecessary heading bytes (depending on file type)
+    sram_data = (
+        sram_data[170:] if filepath == "TPS23881_2_SRAM_v14.bin" else sram_data[169:]
+    )
     sram_data_bytes = list(struct.iter_unpack("c", sram_data))
     del sram_data_bytes[11 - 1 :: 11]  # remove space character bytes
     del sram_data_bytes[10 - 1 :: 10]  # remove newline character bytes
@@ -72,7 +74,7 @@ if __name__ == "__main__":
         prepare_ram_download()
 
         # load Parity data
-        parity_data = load_tps23881_binfile("TPS23881_2_PARITY_V14.bin")
+        parity_data = load_tps23881_binfile("TPS23881_2_PARITY_v14.bin")
         # write Parity data
         # (1) write in blocks of 32 bytes at once
         number_of_32byte_blocks = (len(parity_data) // 32) + 1
